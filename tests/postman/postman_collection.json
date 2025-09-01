@@ -1,0 +1,335 @@
+{
+  "info": {
+    "name": "Produto de Software - Testes (Template)",
+    "_postman_id": "auto-generated",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Template de testes para API (adapte os endpoints ao seu backend)."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Health",
+      "item": [
+        {
+          "name": "GET /api/health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"JSON válido\", function () {",
+                  "  pm.response.to.be.withBody;",
+                  "  pm.response.to.be.json;",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property(\"status\");",
+                  "  pm.expect(body.status).to.match(/ok|healthy/i);",
+                  "});",
+                  "",
+                  "pm.test(\"Tempo de resposta < 800ms\", function () {",
+                  "  pm.expect(pm.response.responseTime).to.be.below(800);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Auth",
+      "item": [
+        {
+          "name": "POST /api/auth/login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{username}}\",\"password\":\"{{password}}\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 ou 201\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201]);",
+                  "});",
+                  "",
+                  "pm.test(\"Recebe token\", function () {",
+                  "  const ct = pm.response.headers.get(\"Content-Type\") || \"\";",
+                  "  pm.expect(ct).to.include(\"application/json\");",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.any.keys(\"access\",\"token\",\"jwt\");",
+                  "  const token = json.access || json.token || json.jwt;",
+                  "  pm.environment.set(\"auth_token\", token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Items",
+      "item": [
+        {
+          "name": "GET /api/items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "items"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Lista em JSON\", function () {",
+                  "  pm.response.to.be.json;",
+                  "  const arr = pm.response.json();",
+                  "  pm.expect(arr).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/items",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Item teste\",\"description\":\"desc\",\"is_donation\":true}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "items"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Criado com sucesso\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201]);",
+                  "  const json = pm.response.json();",
+                  "  pm.environment.set(\"item_id\", json.id || json.uuid || json._id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/items/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/items/{{item_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "items",
+                "{{item_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Possui campos essenciais\", function () {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.have.property(\"id\");",
+                  "  pm.expect(j).to.have.property(\"title\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/items/:id",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Item atualizado\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/items/{{item_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "items",
+                "{{item_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Atualizado\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/items/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/items/{{item_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "items",
+                "{{item_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Deletado\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
