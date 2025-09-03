@@ -13,31 +13,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- Setup Python / instalar backend ---
+      # --- Python/Django ---
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"   # 3.11 é bem compatível; 3.12 também funciona se quiser
 
       - name: Install backend deps
-        working-directory: backend
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install -r requirements.txt
-          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt
 
-      - name: Wait for API
+      - name: Django migrate
+        run: |
+          python backend/manage.py migrate --noinput
+
+      - name: Start Django server (background)
+        run: |
+          # sem autoreload para não spawnar 2 processos no CI
+          python backend/manage.py runserver 0.0.0.0:8000 --noreload &
+          echo $! > django.pid
+
+      - name: Wait for API (/api/health)
         run: |
           for i in {1..30}; do
-            if curl -sf http://127.0.0.1:8000/docs >/dev/null; then
+            if curl -sf http://127.0.0.1:8000/api/health >/dev/null; then
               echo "API is up"; exit 0
             fi
             echo "Waiting API... ($i)"; sleep 2
           done
           echo "API did not start"; exit 1
 
-      # --- Setup Node / Newman ---
+      # --- Node/Newman ---
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -51,12 +58,9 @@ jobs:
           mkdir -p reports/postman
           newman run tests/postman/postman_collection.json \
             -e tests/postman/postman_environment_local.json \
+            --env-var baseUrl=http://127.0.0.1:8000 \
             --reporters cli,htmlextra \
             --reporter-htmlextra-export reports/postman/report.html
 
       - name: Upload Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: postman-report
-          path: reports/postman/report.html
-          retention-days: 7
+        uses: actions/upload-artifact@
