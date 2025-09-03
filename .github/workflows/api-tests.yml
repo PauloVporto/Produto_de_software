@@ -17,7 +17,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"   # 3.11 é bem compatível; 3.12 também funciona se quiser
+          python-version: "3.11"
 
       - name: Install backend deps
         run: |
@@ -25,12 +25,11 @@ jobs:
           python -m pip install -r backend/requirements.txt
 
       - name: Django migrate
-        run: |
-          python backend/manage.py migrate --noinput
+        run: python backend/manage.py migrate --noinput
 
       - name: Start Django server (background)
         run: |
-          # sem autoreload para não spawnar 2 processos no CI
+          # sem autoreload para não duplicar processo
           python backend/manage.py runserver 0.0.0.0:8000 --noreload &
           echo $! > django.pid
 
@@ -63,4 +62,13 @@ jobs:
             --reporter-htmlextra-export reports/postman/report.html
 
       - name: Upload Report
-        uses: actions/upload-artifact@
+        uses: actions/upload-artifact@v4
+        with:
+          name: postman-report
+          path: reports/postman/report.html
+          retention-days: 7
+
+      - name: Stop Django (cleanup)
+        if: always()
+        run: |
+          if [ -f django.pid ]; then kill "$(cat django.pid)" || true; fi
